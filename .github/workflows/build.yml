@@ -1,6 +1,5 @@
 name: CI Build
 
-# 触发条件：只要代码 push 到 main 分支就干活
 on:
   push:
     branches:
@@ -8,25 +7,36 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest # GitHub 免费给你提供一台 Ubuntu 服务器
+    runs-on: ubuntu-latest
 
     steps:
       - name: 1. 拉取你的最新代码
         uses: actions/checkout@v4
 
-      - name: 2. 安装 pnpm (关键步骤)
+      - name: 2. 安装 pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9 # 使用最新的 pnpm 版本
+          version: 9
 
       - name: 3. 安装 Node.js 20.15.0 环境
         uses: actions/setup-node@v4
         with:
           node-version: "20.15.0"
-          cache: "pnpm" # 架构师秘籍：开启 pnpm 缓存，下次构建秒级完成！
+          cache: "pnpm"
 
       - name: 4. 安装项目依赖
         run: pnpm install
 
       - name: 5. 执行自动构建打包
         run: pnpm run build
+
+      # 👇👇👇 下面是全新的魔法步骤 👇👇👇
+      - name: 6. 自动部署到腾讯云服务器
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: "dist" # 把刚才构建出来的 dist 文件夹作为货源
+          target: "/opt/1panel/apps/openresty/openresty/www/sites/demo-cicd/index" # 你的 1Panel 绝对路径
+          strip_components: 1 # 🧠 架构师细节：脱掉 dist 这层外衣，只把里面的 index.html 等文件扔进去
