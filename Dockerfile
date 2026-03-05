@@ -6,8 +6,7 @@ FROM node:20.15.0-alpine AS builder
 # 设置工作目录
 WORKDIR /app
 
-# 启用 pnpm（Node v20 内置了 corepack，可以直接开启 pnpm）
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm install -g pnpm
 
 # 先拷贝依赖文件，利用 Docker 缓存机制加速下一次构建
 COPY package.json pnpm-lock.yaml ./
