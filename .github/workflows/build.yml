@@ -1,4 +1,4 @@
-name: CI Build
+name: 🚀 Docker CI/CD 终极部署
 
 on:
   push:
@@ -6,40 +6,45 @@ on:
       - main
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: 1. 拉取你的最新代码
         uses: actions/checkout@v4
 
-      - name: 2. 安装 pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
+      # 👇 魔法开始了！GitHub 环境自带 Docker，直接按照你的说明书造集装箱
+      - name: 2. 召唤 Docker 打造集装箱 (Build)
+        run: docker build -t my-ai-agent:latest .
 
-      - name: 3. 安装 Node.js 20.15.0 环境
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20.15.0"
-          cache: "pnpm"
+      - name: 3. 把集装箱打包成压缩包 (Save)
+        run: docker save my-ai-agent:latest > my-ai-agent.tar
 
-      - name: 4. 安装项目依赖
-        run: pnpm install
-
-      - name: 5. 执行自动构建打包
-        run: pnpm run build
-
-      - name: 5.5. 架构师天眼：查看到底生成了啥 (Debug)
-        run: ls -la && echo "--- 尝试查看 dist 目录 ---" && ls -la dist || echo "🚨 警告：根本没有生成 dist 目录！"
-
-      # 👇👇👇 下面是全新的魔法步骤 👇👇👇
-      - name: 6. 自动部署到腾讯云服务器
+      - name: 4. 用货车运到腾讯云临时中转站 (SCP)
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "example/dist" # 注意这里加了一个斜杠 /
-          target: "/opt/1panel/apps/openresty/openresty/www/sites/demo-cicd/index"
-          strip_components: 2
+          source: "my-ai-agent.tar"
+          target: "/tmp" # 先放在服务器的 /tmp 临时目录下，不需要特殊权限
+
+      - name: 5. 服务器签收并运行集装箱！(Run)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            echo "📦 开始拆开包装，加载镜像..."
+            sudo docker load < /tmp/my-ai-agent.tar
+            
+            echo "🧹 停掉并清理旧的集装箱（如果存在的话）..."
+            sudo docker rm -f ai-agent-container || true
+            
+            echo "🚀 运行新的集装箱！映射到 8888 端口..."
+            sudo docker run -d --name ai-agent-container -p 8888:80 my-ai-agent:latest
+            
+            echo "🗑️ 打扫战场，删掉压缩包..."
+            rm /tmp/my-ai-agent.tar
+            echo "🎉 部署大功告成！"
